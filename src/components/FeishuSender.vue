@@ -14,6 +14,16 @@
     </div>
 
     <div class="form-group">
+        <label>选择部门（发送给部门下所有成员）</label>
+        <select v-model="selectedDepartmentIds" multiple size="4" style="width: 100%;">
+            <option v-for="dept in departmentList" :key="dept.department_id" :value="dept.department_id">
+                {{ dept.name }}
+            </option>
+        </select>
+        <small>按住 Ctrl（Mac: Command）键可多选，将发送给部门下所有成员</small>
+    </div>
+
+    <div class="form-group">
       <label>消息类型</label>
       <select v-model="msgType">
         <option value="text">文本 (text)</option>
@@ -99,6 +109,10 @@ import axios from 'axios';
 const userList = ref([]);
 const selectedOpenIds = ref([]);
 
+// ---------- 部门列表 ----------
+const departmentList = ref([]);
+const selectedDepartmentIds = ref([]);
+
 // ---------- 消息内容 ----------
 const msgType = ref('text');
 const textContent = ref('');
@@ -128,10 +142,10 @@ const isSending = ref(false);
 const immediateResult = ref(null);
 
 const sendImmediate = async () => {
-  if (selectedOpenIds.value.length === 0) {
-    alert('请至少选择一个接收人');
-    return;
-  }
+  if (selectedOpenIds.value.length === 0 && selectedDepartmentIds.value.length === 0) {
+        alert('请至少选择一个用户或部门');
+        return;
+    }
   let content;
   try {
     content = getContent();
@@ -145,6 +159,7 @@ const sendImmediate = async () => {
   try {
     const response = await apiClient.post('/api/send-batch-message', {
       openIds: selectedOpenIds.value,
+      departmentIds: selectedDepartmentIds.value,
       msgType: msgType.value,
       content,
     });
@@ -233,6 +248,7 @@ const saveScheduledTask = async () => {
     dateTime: new Date(scheduledDateTime.value).toISOString(),
     dayOfWeek,
     openIds: selectedOpenIds.value,
+    departmentIds: selectedDepartmentIds.value,
     msgType: msgType.value,
     content,
     enabled: scheduledEnabled.value,
@@ -278,10 +294,22 @@ const fetchUsers = async () => {
     console.error('获取用户列表失败:', error);
   }
 };
+// 获取部门列表
+const fetchDepartments = async () => {
+    try {
+        const response = await apiClient.get('/api/departments');
+        if (response.data.success) {
+            departmentList.value = response.data.data;
+        }
+    } catch (error) {
+        console.error('获取部门列表失败:', error);
+    }
+};
 
 onMounted(() => {
   fetchUsers();
   loadScheduledTask();
+  fetchDepartments();
 });
 </script>
 
